@@ -1,0 +1,38 @@
+#-----------------------------------------------------------
+# Vivado v2017.2 (64-bit)
+# SW Build 1909853 on Thu Jun 15 18:39:10 MDT 2017
+# IP Build 1909766 on Thu Jun 15 19:58:00 MDT 2017
+# Start of session at: Mon Nov  6 23:24:58 2017
+# Process ID: 10564
+# Current directory: /home/phicrow/classes/ece511/final_project/gem5
+# Command line: vivado
+# Log file: /home/phicrow/classes/ece511/final_project/gem5/vivado.log
+# Journal file: /home/phicrow/classes/ece511/final_project/gem5/vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project /home/phicrow/classes/ece527/mp4/MP4FinalDesign/accelerator_demo/accelerator_demo.xpr
+Scanning sources...
+Finished scanning sources
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1700] Loaded user IP repository '/home/phicrow/classes/ece527/mp4/MP4FinalDesign/LeNetAccelerator'.
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/home/phicrow/applications/Xilinx/Vivado/2017.2/data/ip'.
+WARNING: [IP_Flow 19-3664] IP 'accelerator_bd_auto_pc_0' generated file not found '/home/phicrow/classes/ece527/mp4/MP4FinalDesign/accelerator_demo/accelerator_demo.srcs/sources_1/bd/accelerator_bd/ip/accelerator_bd_auto_pc_0/stats.txt'. Please regenerate to continue.
+WARNING: [BD 41-1661] One or more IPs have been locked in the design 'accelerator_bd.bd'. Please run report_ip_status for more details and recommendations on how to fix this issue.
+List of locked IPs:
+accelerator_bd_LeNetAccelerator_0_1
+
+open_project: Time (s): cpu = 00:00:25 ; elapsed = 00:00:18 . Memory (MB): peak = 6119.172 ; gain = 177.004 ; free physical = 1947 ; free virtual = 12716
+update_compile_order -fileset sources_1
+open_bd_design {/home/phicrow/classes/ece527/mp4/MP4FinalDesign/accelerator_demo/accelerator_demo.srcs/sources_1/bd/accelerator_bd/accelerator_bd.bd}
+Adding cell -- xilinx.com:ip:processing_system7:5.5 - processing_system7_0
+Adding cell -- xilinx.com:ip:proc_sys_reset:5.0 - rst_ps7_0_100M
+Adding cell -- xilinx.com:ip:smartconnect:1.0 - axi_smc
+Adding cell -- xilinx.com:ip:smartconnect:1.0 - axi_smc_1
+Adding cell -- xilinx.com:ip:smartconnect:1.0 - axi_smc_2
+Adding cell -- xilinx.com:ip:axi_timer:2.0 - axi_timer_0
+Adding cell -- xilinx.com:ip:smartconnect:1.0 - smartconnect_0
+Adding cell -- xilinx.com:hls:LeNetAccelerator:1.0 - LeNetAccelerator_0
+Adding cell -- xilinx.com:ip:axi_crossbar:2.1 - xbar
+Adding cell -- xilinx.com:ip:axi_protocol_converter:2.1 - auto_pc
+Successfully read diagram <accelerator_bd> from BD file </home/phicrow/classes/ece527/mp4/MP4FinalDesign/accelerator_demo/accelerator_demo.srcs/sources_1/bd/accelerator_bd/accelerator_bd.bd>
+open_bd_design: Time (s): cpu = 00:00:08 ; elapsed = 00:00:06 . Memory (MB): peak = 6236.605 ; gain = 87.410 ; free physical = 1785 ; free virtual = 12584
