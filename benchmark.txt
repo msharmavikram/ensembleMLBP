@@ -1,0 +1,6 @@
+Freely Available Benchmarks
+Parsec are multithreaded benchmarks, designed for testing shared memory - http://parsec.cs.princeton.edu/
+ 
+The Bi-Mode Branch Predictor paper also evaluated using: http://web2.clarkson.edu/class/cs644/isolation/design.html
+ 
+SPLASH-2 is another parallel benchmark suite: http://www.capsl.udel.edu/splash/
