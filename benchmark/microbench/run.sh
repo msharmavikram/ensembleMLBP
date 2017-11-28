@@ -1,0 +1,9 @@
+aarch64-linux-gnu-gcc -static  Step1.c -o  Step1
+aarch64-linux-gnu-gcc -static  Step2.c -o  Step2
+aarch64-linux-gnu-gcc -static  Step3.c -o  Step3
+aarch64-linux-gnu-gcc -static  Step4.c -o  Step4
+aarch64-linux-gnu-gcc -static  Step5.c -o  Step5
+aarch64-linux-gnu-gcc -static  Step6.c -o  Step6
+aarch64-linux-gnu-gcc -static  Step7.c -o  Step7
+aarch64-linux-gnu-gcc -static  Step8.c -o  Step8
+aarch64-linux-gnu-gcc -static  Step9.c -o  Step9
