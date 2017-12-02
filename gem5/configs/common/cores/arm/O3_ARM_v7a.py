@@ -98,15 +98,11 @@ class O3_ARM_v7a_FUP(FUPool):
 # LTAGE
 # Gshare
 # Yags
-# Perceptron
-class O3_ARM_v7a_BP(TournamentBP):
-    globalPredictorSize = 8192 # Gshare, Yags
-    globalCtrBits = 2 # Gshare, Yags
+# EnsembleBP
+class O3_ARM_v7a_BP(EnsembleBP):
     cacheSize = 2048 # Yags
     historyLength = 12 # Perceptron
-
-    choicePredictorSize = 8192
-    choiceCtrBits = 2
+    
     BTBEntries = 2048
     BTBTagSize = 18
     RASSize = 16
@@ -114,7 +110,7 @@ class O3_ARM_v7a_BP(TournamentBP):
     localPredictorSize = 2048
     localCtrBits = 2
     localHistoryTableSize = 2048
-    # globalPredictorSize = 8192 # duplicated
+    globalPredictorSize = 8192 # duplicated
     globalCtrBits = 2
     choicePredictorSize = 8192
     choiceCtrBits = 2

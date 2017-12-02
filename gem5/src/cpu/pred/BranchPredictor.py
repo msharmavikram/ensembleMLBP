@@ -216,20 +216,19 @@ class Yags(BranchPredictor):
     historyLength = Param.Unsigned(12, "History Length")
 
 
-class Perceptron(BranchPredictor):
-    type = 'Perceptron'
-    cxx_class = 'Perceptron'
-    cxx_header = "cpu/pred/perceptron.hh"
+class EnsembleBP(BranchPredictor):
+    type = 'EnsembleBP'
+    cxx_class = 'EnsembleBP'
+    cxx_header = "cpu/pred/ensemble.hh"
 
-    historyLength = Param.Unsigned(12, "History Length")
-
+    localPredictorSize = Param.Unsigned(2048, "Size of local predictor")
+    localCtrBits = Param.Unsigned(2, "Bits per counter")
+    localHistoryTableSize = Param.Unsigned(2048, "size of local history table")
     globalPredictorSize = Param.Unsigned(8192, "Size of global predictor")
     globalCtrBits = Param.Unsigned(2, "Bits per counter")
     choicePredictorSize = Param.Unsigned(8192, "Size of choice predictor")
     choiceCtrBits = Param.Unsigned(2, "Bits of choice counters")
-    localPredictorSize = Param.Unsigned(2048, "Size of local predictor")
-    localCtrBits = Param.Unsigned(2, "Bits per counter")
-    localHistoryTableSize = Param.Unsigned(2048, "size of local history table")
+
     logSizeBiMP = Param.Unsigned(14, "Log size of Bimodal predictor in bits")
     logSizeTagTables = Param.Unsigned(11, "Log size of tag table in LTAGE")
     logSizeLoopPred = Param.Unsigned(8, "Log size of the loop predictor")
@@ -241,3 +240,4 @@ class Perceptron(BranchPredictor):
     maxHist = Param.Unsigned(640, "Maximum history size of LTAGE")
     minTagWidth = Param.Unsigned(7, "Minimum tag size in tag tables")
     cacheSize = Param.Unsigned(2048, "Size of the taken/not taken caches")
+    historyLength = Param.Unsigned(12, "History Length")
