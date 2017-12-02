@@ -12,4 +12,4 @@ build/ARM/gem5.fast -d m5out/Treesort   ./configs/example/se.py --caches --l2cac
 echo "Running Parsec Blackscholes Simple"
 build/ARM/gem5.fast -d m5out/blackscholes ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c /home/vikram/coursework/ece511/ensembleMLBP/benchmark/blackscholes/src/blackscholes -o '1 /home/vikram/coursework/ece511/ensembleMLBP/benchmark/blackscholes/inputs/in_4.txt out.log'
 echo "Running Parsec Blackscholes Complex"
-build/ARM/gem5.fast -d m5out/blackscholes ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c /home/vikram/coursework/ece511/ensembleMLBP/benchmark/blackscholes/src/blackscholes -o '1 /home/vikram/coursework/ece511/ensembleMLBP/benchmark/blackscholes/inputs/in_4.txt out.log'
+build/ARM/gem5.fast -d m5out/blackscholes_16 ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c /home/vikram/coursework/ece511/ensembleMLBP/benchmark/blackscholes/src/blackscholes -o '1 /home/vikram/coursework/ece511/ensembleMLBP/benchmark/blackscholes/inputs/in_16.txt out.log'
