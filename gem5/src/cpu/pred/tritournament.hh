@@ -280,8 +280,23 @@ class TriTournamentBP : public BPredUnit
     /** Number of entries in the choice predictor. */
     unsigned choicePredictorSize;
 
-    /** Number of bits in the choice predictor's counters. */
+    /** Number of bits in the second choice predictor's counters. */
     unsigned choiceCtrBits;
+
+
+    /** Mask to apply to globalHistory to access choice history table.
+     *  Based on choicePredictorSize.*/
+    unsigned choiceHistoryMask2;
+
+    /** Array of counters that make up the second choice predictor. */
+    std::vector<SatCounter> choiceCtrs2;
+
+    /** Number of entries in the choice predictor. */
+    unsigned choicePredictorSize2;
+
+    /** Number of bits in the choice predictor's counters. */
+    unsigned choiceCtrBits2;
+
 
     /** Thresholds for the counter value; above the threshold is taken,
      *  equal to or below the threshold is not taken.
@@ -290,6 +305,7 @@ class TriTournamentBP : public BPredUnit
     unsigned localThreshold2;
     unsigned globalThreshold;
     unsigned choiceThreshold;
+    unsigned choiceThreshold2;
 };
 
 #endif // __CPU_PRED_TRITOURNAMENT_PRED_HH__

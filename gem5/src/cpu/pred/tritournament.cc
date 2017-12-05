@@ -65,9 +65,10 @@ TriTournamentBP::TriTournamentBP(const TriTournamentBPParams *params)
           ceilLog2(params->globalPredictorSize) :
           ceilLog2(params->choicePredictorSize)),
       choicePredictorSize(params->choicePredictorSize),
-      choiceCtrBits(params->choiceCtrBits)
+      choiceCtrBits(params->choiceCtrBits),
+      choicePredictorSize2(params->choicePredictorSize2),
+      choiceCtrBits2(params->choiceCtrBits2)
 {
-    // TODO Initialize second choice predictor
     if (!isPowerOf2(localPredictorSize)) {
         fatal("Invalid local predictor size!\n");
     }
@@ -143,6 +144,16 @@ TriTournamentBP::TriTournamentBP(const TriTournamentBPParams *params)
     //Set up historyRegisterMask
     historyRegisterMask = mask(globalHistoryBits);
 
+    // Set up choiceHistoryMask2
+    // this is equivalent to mask(log2(choicePredictorSize2))
+    choiceHistoryMask2 = choicePredictorSize2 - 1;
+
+    //Setup the array of counters for the choice predictor
+    choiceCtrs2.resize(choicePredictorSize2);
+
+    for (int i = 0; i < choicePredictorSize2; ++i)
+        choiceCtrs2[i].setBits(choiceCtrBits2);
+
     //Check that predictors don't use more bits than they have available
     if (globalHistoryMask > historyRegisterMask) {
         fatal("Global predictor too large for global history bits!\n");
@@ -150,19 +161,23 @@ TriTournamentBP::TriTournamentBP(const TriTournamentBPParams *params)
     if (choiceHistoryMask > historyRegisterMask) {
         fatal("Choice predictor too large for global history bits!\n");
     }
+    if (choiceHistoryMask2 > historyRegisterMask) {
+        fatal("Choice predictor too large for global history bits!\n");
+    }
 
     if (globalHistoryMask < historyRegisterMask &&
-        choiceHistoryMask < historyRegisterMask) {
+        choiceHistoryMask < historyRegisterMask &&
+        choiceHistoryMask2 < historyRegisterMask) {
         inform("More global history bits than required by predictors\n");
     }
 
     // Set thresholds for the three predictors' counters
     // This is equivalent to (2^(Ctr))/2 - 1
-    localThreshold  = (ULL(1) << (localCtrBits  - 1)) - 1;
-    localThreshold2 = (ULL(1) << (localCtrBits2 - 1)) - 1;
-    globalThreshold = (ULL(1) << (globalCtrBits - 1)) - 1;
-    choiceThreshold = (ULL(1) << (choiceCtrBits - 1)) - 1;
-    // TODO Uncomment: choiceThreshold2 = (ULL(1) << (choiceCtrBits)) - 1;
+    localThreshold   = (ULL(1) << (localCtrBits  - 1)) - 1;
+    localThreshold2  = (ULL(1) << (localCtrBits2 - 1)) - 1;
+    globalThreshold  = (ULL(1) << (globalCtrBits - 1)) - 1;
+    choiceThreshold  = (ULL(1) << (choiceCtrBits - 1)) - 1;
+    choiceThreshold2 = (ULL(1) << 2*(choiceCtrBits - 1)) - 1;
 }
 
 inline
@@ -257,6 +272,7 @@ TriTournamentBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 
     bool global_prediction;
     bool choice_prediction;
+    bool choice_prediction2;
 
     //Lookup in the local predictor to get its branch prediction
     local_history_idx = calcLocHistIdx(branch_addr);
@@ -278,7 +294,9 @@ TriTournamentBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
     choice_prediction = choiceThreshold <
       choiceCtrs[globalHistory[tid] & choiceHistoryMask].read();
 
-    // TODO Look up in the second choice predictor
+    // Look up in the second choice predictor
+    choice_prediction2 = choiceThreshold2 <
+        choiceCtrs2[globalHistory[tid] & choiceHistoryMask2].read();
 
     // Create BPHistory and pass it back to be recorded.
     BPHistory *history = new BPHistory;
@@ -287,7 +305,7 @@ TriTournamentBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
     history->localPredTaken2 = local_prediction2;
     history->globalPredTaken = global_prediction;
     history->globalUsed = choice_prediction;
-    // TODO Add localUsed
+    history->local2Used = choice_prediction2;
     history->localHistoryIdx = local_history_idx;
     history->localHistory = local_predictor_idx;
     history->localHistoryIdx2 = local_history_idx2;
@@ -298,26 +316,43 @@ TriTournamentBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 
     // Speculative update of the global history and the
     // selected local history.
-    // TODO Add second choice predictor
-    if (choice_prediction) {
-        if (global_prediction) {
+    if (choice_prediction2) {
+        if (local_prediction2) {
             updateGlobalHistTaken(tid);
             updateLocalHistTaken(local_history_idx);
+            updateLocalHistTaken2(local_history_idx2);
             return true;
         } else {
             updateGlobalHistNotTaken(tid);
             updateLocalHistNotTaken(local_history_idx);
+            updateLocalHistNotTaken2(local_history_idx2);
             return false;
         }
     } else {
-        if (local_prediction) {
-            updateGlobalHistTaken(tid);
-            updateLocalHistTaken(local_history_idx);
-            return true;
+        if (choice_prediction) {
+            if (global_prediction) {
+                updateGlobalHistTaken(tid);
+                updateLocalHistTaken(local_history_idx);
+                updateLocalHistTaken2(local_history_idx2);
+                return true;
+            } else {
+                updateGlobalHistNotTaken(tid);
+                updateLocalHistNotTaken(local_history_idx);
+                updateLocalHistNotTaken2(local_history_idx2);
+                return false;
+            }
         } else {
-            updateGlobalHistNotTaken(tid);
-            updateLocalHistNotTaken(local_history_idx);
-            return false;
+            if (local_prediction) {
+                updateGlobalHistTaken(tid);
+                updateLocalHistTaken(local_history_idx);
+                updateLocalHistTaken2(local_history_idx2);
+                return true;
+            } else {
+                updateGlobalHistNotTaken(tid);
+                updateLocalHistNotTaken(local_history_idx);
+                updateLocalHistNotTaken2(local_history_idx2);
+                return false;
+            }
         }
     }
 }
@@ -370,7 +405,7 @@ TriTournamentBP::updateAdditionalStats(bool taken, void* bp_history)
 
 void
 TriTournamentBP::update(ThreadID tid, Addr branch_addr, bool taken,
-                     void *bp_history, bool squashed)
+                        void *bp_history, bool squashed)
 {
     assert(bp_history);
 
@@ -421,7 +456,6 @@ TriTournamentBP::update(ThreadID tid, Addr branch_addr, bool taken,
 
     // Update the choice predictor to tell it which one was correct if
     // there was a prediction.
-    // TODO Update the second choice predictor
     if (history->localPredTaken != history->globalPredTaken &&
         old_local_pred_valid)
     {
@@ -435,6 +469,21 @@ TriTournamentBP::update(ThreadID tid, Addr branch_addr, bool taken,
          } else if (history->globalPredTaken == taken) {
              choiceCtrs[choice_predictor_idx].increment();
          }
+    }
+    // Update the second choice predictor
+    if (((history->globalUsed &&
+          history->localPredTaken2 != history->globalPredTaken) ||
+         (!history->globalUsed &&
+          history->localPredTaken2 != history->localPredTaken)) &&
+        old_local_pred_valid2) {
+        unsigned choice_predictor_idx2 =
+            history->globalHistory & choiceHistoryMask;
+        if (history->localPredTaken2 == taken) {
+            choiceCtrs2[choice_predictor_idx2].increment();
+        } else if (history->globalPredTaken == taken ||
+                   history->localPredTaken == taken) {
+            choiceCtrs2[choice_predictor_idx2].decrement();
+        }
     }
 
     // Update the counters with the proper
