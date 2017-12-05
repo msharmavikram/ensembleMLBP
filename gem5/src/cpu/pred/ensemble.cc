@@ -46,6 +46,7 @@
 #include "base/intmath.hh"
 
 #define USE_GSHARE 1
+#define ENSEMBLE_SIZE_3 1
 
 EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
     : BPredUnit(params),
@@ -249,11 +250,13 @@ EnsembleBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
     else
         accumulation -= localWeights[local_predictor_idx].read();
 
+#ifdef ENSEMBLE_SIZE_3
     // Add GShare to verdict
     if(gshare_prediction)
         accumulation += gshareWeights[gshare_predictor_idx].read();
     else
         accumulation -= gshareWeights[gshare_predictor_idx].read();
+#endif
 
     history->finalPrediction = (accumulation >= 0);
     return history->finalPrediction;
