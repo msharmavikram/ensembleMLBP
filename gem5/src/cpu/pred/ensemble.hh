@@ -170,6 +170,7 @@ class EnsembleBP : public BPredUnit
         unsigned localHistory;
         bool localPredTaken;
         bool globalPredTaken;
+        bool gsharePredTaken;
         bool globalUsed;
         bool finalPrediction;
     };
@@ -219,33 +220,24 @@ class EnsembleBP : public BPredUnit
      *  Based on globalPredictorSize.*/
     unsigned globalHistoryMask;
 
-    /** Mask to apply to globalHistory to access choice history table.
-     *  Based on choicePredictorSize.*/
-    unsigned choiceHistoryMask;
-
     /** Mask to control how much history is stored. All of it might not be
      *  used. */
     unsigned historyRegisterMask;
 
-    /** Array of counters that make up the choice predictor. */
-    std::vector<SatCounter> choiceCtrs;
-
-    /** Number of entries in the choice predictor. */
-    unsigned choicePredictorSize;
-
-    /** Number of bits in the choice predictor's counters. */
-    unsigned choiceCtrBits;
+    std::vector<SatCounter> gshareCtrs;
+    unsigned gsharePredictorSize;
+    unsigned gshareCtrBits;
 
     std::vector<SatCounter> localWeights;
     std::vector<SatCounter> globalWeights;
+    std::vector<SatCounter> gshareWeights;
 
     /** Thresholds for the counter value; above the threshold is taken,
      *  equal to or below the threshold is not taken.
      */
     unsigned localThreshold;
     unsigned globalThreshold;
-    unsigned choiceThreshold;
-    uint8_t weightThreshold;
+    unsigned gshareThreshold;
 };
 
 #endif // __CPU_PRED_ENSEMBLE_PRED_HH__
