@@ -114,7 +114,8 @@ class EnsembleBP : public BPredUnit
 
     unsigned getGHR(ThreadID tid, void *bp_history) const;
 
-    void updateAdditionalStats(bool taken, void* bp_history);
+    void updateAdditionalStats(bool taken, void* bp_history, unsigned gshare_index, unsigned global_index, unsigned local_index,
+                                    bool gshareContributed, bool globalContributed, bool localContributed);
 
   private:
     /**

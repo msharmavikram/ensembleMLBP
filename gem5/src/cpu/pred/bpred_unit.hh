@@ -333,6 +333,8 @@ class BPredUnit : public SimObject
     ProbePoints::PMUUPtr ppMisses;
 
     Stats::Scalar atLeastOneCorrectExpert;
+    Stats::Scalar allExpertsSame;
+    Stats::Scalar lowWeightExpertsWon;
 
     /** @} */
 };

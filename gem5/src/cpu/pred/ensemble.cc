@@ -46,7 +46,10 @@
 #include "base/intmath.hh"
 
 #define USE_GSHARE 1
+//#define USE_FREE_WEIGHTS 1
 #define ENSEMBLE_SIZE_3 1
+#define MAX_WEIGHT_SUM 12
+#define WEIGHT_COUNTER_SIZE 4
 
 EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
     : BPredUnit(params),
@@ -79,7 +82,7 @@ EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
 
     for (int i = 0; i < localPredictorSize; ++i){
         localCtrs[i].setBits(localCtrBits);
-        localWeights[i].setBits(2);
+        localWeights[i].setBits(WEIGHT_COUNTER_SIZE);
     }
 
     localPredictorMask = mask(localHistoryBits);
@@ -100,7 +103,7 @@ EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
 
     for (int i = 0; i < globalPredictorSize; ++i){
         globalCtrs[i].setBits(globalCtrBits);
-        globalWeights[i].setBits(2);
+        globalWeights[i].setBits(WEIGHT_COUNTER_SIZE);
     }
 
     // Setup the array of counters for the gshare predictor
@@ -108,8 +111,8 @@ EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
     gshareWeights.resize(globalPredictorSize);
 
     for (int i = 0; i < gsharePredictorSize; ++i){
-        gshareCtrs[i].setBits(gshareCtrBits); // UMUR: Declare two arrays here
-        gshareWeights[i].setBits(2);
+        gshareCtrs[i].setBits(gshareCtrBits); 
+        gshareWeights[i].setBits(WEIGHT_COUNTER_SIZE);
     }
 
     // Set up the global history mask
@@ -281,7 +284,8 @@ EnsembleBP::uncondBranch(ThreadID tid, Addr pc, void * &bp_history)
 }
 
 void
-EnsembleBP::updateAdditionalStats(bool taken, void* bp_history)
+EnsembleBP::updateAdditionalStats(bool taken, void* bp_history, unsigned gshare_index, unsigned global_index, unsigned local_index,
+                                    bool gshareContributed, bool globalContributed, bool localContributed)
 {
     // Get BP History for prediction information
     BPHistory *history = (BPHistory*)bp_history;
@@ -291,11 +295,33 @@ EnsembleBP::updateAdditionalStats(bool taken, void* bp_history)
     if(taken == prediction)
         mispredict = false;
 
+    // If the expert with the highest weight was overtaken by two experts with lower weights in the vote
+    if(((!gshareContributed && globalContributed && localContributed) 
+            && (gshareWeights[gshare_index].read() > globalWeights[global_index].read())
+            && (gshareWeights[gshare_index].read() > localWeights[local_index].read()))
+        ||
+        ((gshareContributed && !globalContributed && localContributed) 
+            && (globalWeights[global_index].read() > gshareWeights[gshare_index].read())
+            && (globalWeights[global_index].read() > localWeights[local_index].read()))
+        ||
+        ((gshareContributed && globalContributed && !localContributed) 
+            && (localWeights[local_index].read() > gshareWeights[gshare_index].read())
+            && (localWeights[local_index].read() > globalWeights[local_index].read())))
+    {
+        lowWeightExpertsWon++;
+    }
+
+    if((history->localPredTaken == history->globalPredTaken) && (history->globalPredTaken == history->gsharePredTaken))
+    {
+        // All experts voted the same way
+        allExpertsSame++;
+    }
+
     if(mispredict)
     {
         if(((history->localPredTaken == taken)) || (history->globalPredTaken == taken) || (history->gsharePredTaken == taken))
         {
-            // Potential correct predictions should count up here.
+            // There was at least one correct expert
             atLeastOneCorrectExpert++;
         }
     }
@@ -306,11 +332,9 @@ EnsembleBP::update(ThreadID tid, Addr branch_addr, bool taken,
                      void *bp_history, bool squashed)
 {
     assert(bp_history);
-
     BPHistory *history = static_cast<BPHistory *>(bp_history);
 
     unsigned local_history_idx = calcLocHistIdx(branch_addr);
-
     assert(local_history_idx < localHistoryTableSize);
 
     // Unconditional branches do not use local history.
@@ -334,11 +358,8 @@ EnsembleBP::update(ThreadID tid, Addr branch_addr, bool taken,
         return;
     }
 
-    updateAdditionalStats(taken, bp_history);
-
     unsigned old_local_pred_index = history->localHistory &
         localPredictorMask;
-
     assert(old_local_pred_index < localPredictorSize);
 
     // Update the counters with the proper
@@ -358,6 +379,138 @@ EnsembleBP::update(ThreadID tid, Addr branch_addr, bool taken,
     unsigned gshare_predictor_idx = globalHistory[tid] & globalHistoryMask;
 #endif
 
+    unsigned contributorCount = 0;
+    unsigned learningRate = 0;
+    unsigned adjustmentRate = 0;
+    unsigned weightSum = 0;
+
+    bool localContributed = false;
+    bool globalContributed = false;
+    bool gshareContributed = false;
+
+    if(history->finalPrediction == history->globalPredTaken)
+    {
+        globalContributed = true;
+        contributorCount++;
+    }
+    if(history->finalPrediction == history->localPredTaken)
+    {
+        localContributed = true;
+        contributorCount++;
+    }
+    if(history->finalPrediction == history->gsharePredTaken)
+    {
+        gshareContributed = true;
+        contributorCount++;
+    }
+
+
+    updateAdditionalStats(taken, bp_history, gshare_predictor_idx, global_predictor_idx, old_local_pred_index,
+                        gshareContributed, globalContributed, localContributed);
+
+#ifndef USE_FREE_WEIGHTS
+    // Contributor count 0 is impossible and count 3 will not impact weights.
+    learningRate = (contributorCount == 1) ? 2 : ((contributorCount == 2) ? 1 : 0);
+    adjustmentRate = (contributorCount == 1) ? 1 : ((contributorCount == 2) ? 2 : 0);
+
+    // Learning
+    if(gshareContributed)
+    {
+        if(history->finalPrediction == taken)
+        {
+            for(int i = 0; i < learningRate; i++)
+                gshareWeights[gshare_predictor_idx].increment();
+        }
+        else
+        {
+            for(int i = 0; i < learningRate; i++)
+                gshareWeights[gshare_predictor_idx].decrement();
+        }
+    }
+    if(globalContributed)
+    {
+        if(history->finalPrediction == taken)
+        {
+            for(int i = 0; i < learningRate; i++)
+                globalWeights[global_predictor_idx].increment();
+        }
+        else
+        {
+            for(int i = 0; i < learningRate; i++)
+                globalWeights[global_predictor_idx].decrement();
+        }
+        
+    }
+    if(localContributed)
+    {
+        if(history->finalPrediction == taken)
+        {
+            for(int i = 0; i < learningRate; i++)
+                localWeights[old_local_pred_index].increment();
+        }
+        else
+        {
+            for(int i = 0; i < learningRate; i++)
+                localWeights[old_local_pred_index].decrement();
+        }
+        
+    }
+
+    // Adjustments
+    weightSum = (gshareWeights[gshare_predictor_idx].read() + globalWeights[global_predictor_idx].read() + localWeights[old_local_pred_index].read());
+    if(weightSum > MAX_WEIGHT_SUM)
+    {
+        if(!gshareContributed)
+        {
+            if(history->finalPrediction == taken)
+            {
+                // Ensemble was correct but GShare voted the other way
+                for(int i = 0; i < adjustmentRate; i++)
+                    gshareWeights[gshare_predictor_idx].decrement();
+            }
+            else
+            {
+                // Ensemble was incorrect and GShare opposed verdict
+                for(int i = 0; i < adjustmentRate; i++)
+                    gshareWeights[gshare_predictor_idx].increment();
+            }
+        }
+        if(!globalContributed)
+        {
+            if(history->finalPrediction == taken)
+            {
+                // Ensemble was correct but GShare voted the other way
+                for(int i = 0; i < adjustmentRate; i++)
+                    globalWeights[global_predictor_idx].decrement();
+            }
+            else
+            {
+                // Ensemble was incorrect and GShare opposed verdict
+                for(int i = 0; i < adjustmentRate; i++)
+                    globalWeights[global_predictor_idx].increment();
+            }
+        }
+        if(!localContributed)
+        {
+            if(history->finalPrediction == taken)
+            {
+                // Ensemble was correct but GShare voted the other way
+                for(int i = 0; i < adjustmentRate; i++)
+                    localWeights[old_local_pred_index].decrement();
+            }
+            else
+            {
+                // Ensemble was incorrect and GShare opposed verdict
+                for(int i = 0; i < adjustmentRate; i++)
+                    localWeights[old_local_pred_index].increment();
+            }
+        }
+    }
+#endif
+
+
+
+
     if (taken) {
           globalCtrs[global_predictor_idx].increment();
           gshareCtrs[gshare_predictor_idx].increment();
@@ -372,32 +525,46 @@ EnsembleBP::update(ThreadID tid, Addr branch_addr, bool taken,
           }
     }
 
+#ifdef USE_FREE_WEIGHTS
     // If Global voted in the same direction as the verdict, update weights
     if(history->finalPrediction == history->globalPredTaken)
     {
         if(history->finalPrediction == taken)
+        {
             globalWeights[global_predictor_idx].increment();
+        }
         else
+        {
             globalWeights[global_predictor_idx].decrement();
+        }
     }
 
     // If Local voted in the same direction as the verdict, update weights
     if(history->finalPrediction == history->localPredTaken)
     {
         if(history->finalPrediction == taken)
+        {
             localWeights[old_local_pred_index].increment();
+        }
         else
+        {
             localWeights[old_local_pred_index].decrement();
+        }
     } 
 
     // If GShare voted in the same direction as the verdict, update weights
     if(history->finalPrediction == history->gsharePredTaken)
     {
         if(history->finalPrediction == taken)
+        {
             gshareWeights[gshare_predictor_idx].increment();
+        }
         else
+        {
             gshareWeights[gshare_predictor_idx].decrement();
-    } 
+        }
+    }
+#endif
 
     // We're done with this history, now delete it.
     delete history;

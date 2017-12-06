@@ -153,6 +153,16 @@ BPredUnit::regStats()
         .name(name() + ".atLeastOneCorrectExpert")
         .desc("Number of mispredicts where there was at least one correct not-selected scheme.")
         ;
+
+    allExpertsSame
+        .name(name() + ".allExpertsSame")
+        .desc("Number of times all experts voted in the same direction.")
+        ;
+
+    lowWeightExpertsWon
+        .name(name() + ".lowWeightExpertsWon")
+        .desc("Number of times where lower weighted experts overrode the highest weight expert.")
+        ;
 }
 
 ProbePoints::PMUUPtr
