@@ -314,7 +314,10 @@ EnsembleBP::updateAdditionalStats(bool taken, void* bp_history, unsigned gshare_
     if((history->localPredTaken == history->globalPredTaken) && (history->globalPredTaken == history->gsharePredTaken))
     {
         // All experts voted the same way
-        allExpertsSame++;
+        if(mispredict)
+            allExpertsWrong++;
+        else
+            allExpertsRight++;
     }
 
     if(mispredict)
@@ -322,7 +325,7 @@ EnsembleBP::updateAdditionalStats(bool taken, void* bp_history, unsigned gshare_
         if(((history->localPredTaken == taken)) || (history->globalPredTaken == taken) || (history->gsharePredTaken == taken))
         {
             // There was at least one correct expert
-            atLeastOneCorrectExpert++;
+            atLeastOneCorrectExpertOnMispredict++;
         }
     }
 }
@@ -507,9 +510,6 @@ EnsembleBP::update(ThreadID tid, Addr branch_addr, bool taken,
         }
     }
 #endif
-
-
-
 
     if (taken) {
           globalCtrs[global_predictor_idx].increment();
