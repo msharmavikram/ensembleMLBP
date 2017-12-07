@@ -149,9 +149,24 @@ BPredUnit::regStats()
         .desc("Number of mispredicted indirect branches.")
         ;
 
-    atLeastOneCorrectExpert
-        .name(name() + ".atLeastOneCorrectExpert")
+    atLeastOneCorrectExpertOnMispredict
+        .name(name() + ".atLeastOneCorrectExpertOnMispredict")
         .desc("Number of mispredicts where there was at least one correct not-selected scheme.")
+        ;
+
+    allExpertsWrong
+        .name(name() + ".allExpertsWrong")
+        .desc("Number of times all experts voted incorrectly.")
+        ;
+
+    allExpertsRight
+        .name(name() + ".allExpertsRight")
+        .desc("Number of times all experts voted correctly.")
+        ;
+
+    lowWeightExpertsWon
+        .name(name() + ".lowWeightExpertsWon")
+        .desc("Number of times where lower weighted experts overrode the highest weight expert.")
         ;
 }
 

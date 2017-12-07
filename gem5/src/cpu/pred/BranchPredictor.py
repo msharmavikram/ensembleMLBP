@@ -215,7 +215,6 @@ class Yags(BranchPredictor):
     cacheSize = Param.Unsigned(2048, "Size of the taken/not taken caches")
     historyLength = Param.Unsigned(12, "History Length")
 
-
 class EnsembleBP(BranchPredictor):
     type = 'EnsembleBP'
     cxx_class = 'EnsembleBP'
@@ -226,8 +225,8 @@ class EnsembleBP(BranchPredictor):
     localHistoryTableSize = Param.Unsigned(2048, "size of local history table")
     globalPredictorSize = Param.Unsigned(8192, "Size of global predictor")
     globalCtrBits = Param.Unsigned(2, "Bits per counter")
-    choicePredictorSize = Param.Unsigned(8192, "Size of choice predictor")
-    choiceCtrBits = Param.Unsigned(2, "Bits of choice counters")
+    gsharePredictorSize = Param.Unsigned(8192, "Size of gshare predictor")
+    gshareCtrBits = Param.Unsigned(2, "Bits of gshare counters")
 
     logSizeBiMP = Param.Unsigned(14, "Log size of Bimodal predictor in bits")
     logSizeTagTables = Param.Unsigned(11, "Log size of tag table in LTAGE")
@@ -242,6 +241,14 @@ class EnsembleBP(BranchPredictor):
     cacheSize = Param.Unsigned(2048, "Size of the taken/not taken caches")
     historyLength = Param.Unsigned(12, "History Length")
 
+    # Not used by this predictor, only putting them here to suppress errors
+    choicePredictorSize = Param.Unsigned(8192, "Size of choice predictor")
+    choiceCtrBits = Param.Unsigned(2, "Bits of choice counters")
+    choicePredictorSize2 = Param.Unsigned(8192, "Size of second choice predictor")
+    choiceCtrBits2 = Param.Unsigned(2, "Bits of second choice counters")
+    localPredictorSize2 = Param.Unsigned(2048, "Size of second local predictor")
+    localCtrBits2 = Param.Unsigned(2, "Bits per counter")
+    localHistoryTableSize2 = Param.Unsigned(2048, "size of second local history table")
 
 class TriTournamentBP(BranchPredictor):
     type = 'TriTournamentBP'

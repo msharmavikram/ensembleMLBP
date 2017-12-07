@@ -332,7 +332,10 @@ class BPredUnit : public SimObject
     /** Miss-predicted branches */
     ProbePoints::PMUUPtr ppMisses;
 
-    Stats::Scalar atLeastOneCorrectExpert;
+    Stats::Scalar atLeastOneCorrectExpertOnMispredict;
+    Stats::Scalar allExpertsWrong;
+    Stats::Scalar allExpertsRight;
+    Stats::Scalar lowWeightExpertsWon;
 
     /** @} */
 };

@@ -280,7 +280,7 @@ TournamentBP::updateAdditionalStats(bool taken, void* bp_history)
         if((history->globalUsed && (history->localPredTaken == taken)) || (!history->globalUsed && (history->globalPredTaken == taken)))
         {
             // Potential correct predictions should count up here.
-            atLeastOneCorrectExpert++;
+            atLeastOneCorrectExpertOnMispredict++;
         }
     }
 }

@@ -1,0 +1,11 @@
+gem5 Simulator System.  http://gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 compiled Dec  6 2017 01:08:45
+gem5 started Dec  6 2017 03:17:48
+gem5 executing on phicrow, pid 24479
+command line: build/ARM/gem5.fast -d m5out/step9 ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/microbench/Step9 -o 8
+
+Global frequency set at 1000000000000 ticks per second
+**** REAL SIMULATION ****
+Define patterns lengthExiting @ tick 655222291500 because exiting with last active thread context

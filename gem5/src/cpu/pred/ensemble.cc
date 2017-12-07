@@ -45,6 +45,12 @@
 #include "base/bitfield.hh"
 #include "base/intmath.hh"
 
+#define USE_GSHARE 1
+//#define USE_FREE_WEIGHTS 1
+#define ENSEMBLE_SIZE_3 1
+#define MAX_WEIGHT_SUM 12
+#define WEIGHT_COUNTER_SIZE 4
+
 EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
     : BPredUnit(params),
       localPredictorSize(params->localPredictorSize),
@@ -54,13 +60,9 @@ EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
       globalPredictorSize(params->globalPredictorSize),
       globalCtrBits(params->globalCtrBits),
       globalHistory(params->numThreads, 0),
-      globalHistoryBits(
-          ceilLog2(params->globalPredictorSize) >
-          ceilLog2(params->choicePredictorSize) ?
-          ceilLog2(params->globalPredictorSize) :
-          ceilLog2(params->choicePredictorSize)),
-      choicePredictorSize(params->choicePredictorSize),
-      choiceCtrBits(params->choiceCtrBits)
+      globalHistoryBits(ceilLog2(params->globalPredictorSize)),
+      gsharePredictorSize(params->gsharePredictorSize),
+      gshareCtrBits(params->gshareCtrBits)
 {
     if (!isPowerOf2(localPredictorSize)) {
         fatal("Invalid local predictor size!\n");
@@ -70,13 +72,17 @@ EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
         fatal("Invalid global predictor size!\n");
     }
 
-    //Set up the array of counters for the local predictor
+    if (!isPowerOf2(gsharePredictorSize)) {
+        fatal("Invalid global predictor size!\n");
+    }
+
+    // Set up the array of counters for the local predictor
     localCtrs.resize(localPredictorSize);
     localWeights.resize(localPredictorSize);
 
     for (int i = 0; i < localPredictorSize; ++i){
         localCtrs[i].setBits(localCtrBits);
-        localWeights[i].setBits(8);
+        localWeights[i].setBits(WEIGHT_COUNTER_SIZE);
     }
 
     localPredictorMask = mask(localHistoryBits);
@@ -85,38 +91,33 @@ EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
         fatal("Invalid local history table size!\n");
     }
 
-    //Setup the history table for the local table
+    // Setup the history table for the local table
     localHistoryTable.resize(localHistoryTableSize);
 
     for (int i = 0; i < localHistoryTableSize; ++i)
         localHistoryTable[i] = 0;
 
-    //Setup the array of counters for the global predictor
+    // Setup the array of counters for the global predictor
     globalCtrs.resize(globalPredictorSize);
     globalWeights.resize(globalPredictorSize);
 
     for (int i = 0; i < globalPredictorSize; ++i){
         globalCtrs[i].setBits(globalCtrBits);
-        globalWeights[i].setBits(8);
+        globalWeights[i].setBits(WEIGHT_COUNTER_SIZE);
+    }
+
+    // Setup the array of counters for the gshare predictor
+    gshareCtrs.resize(gsharePredictorSize);
+    gshareWeights.resize(globalPredictorSize);
+
+    for (int i = 0; i < gsharePredictorSize; ++i){
+        gshareCtrs[i].setBits(gshareCtrBits); 
+        gshareWeights[i].setBits(WEIGHT_COUNTER_SIZE);
     }
 
     // Set up the global history mask
     // this is equivalent to mask(log2(globalPredictorSize)
     globalHistoryMask = globalPredictorSize - 1;
-
-    if (!isPowerOf2(choicePredictorSize)) {
-        fatal("Invalid choice predictor size!\n");
-    }
-
-    // Set up choiceHistoryMask
-    // this is equivalent to mask(log2(choicePredictorSize)
-    choiceHistoryMask = choicePredictorSize - 1;
-
-    //Setup the array of counters for the choice predictor
-    choiceCtrs.resize(choicePredictorSize);
-
-    for (int i = 0; i < choicePredictorSize; ++i)
-        choiceCtrs[i].setBits(choiceCtrBits);
 
     //Set up historyRegisterMask
     historyRegisterMask = mask(globalHistoryBits);
@@ -125,12 +126,8 @@ EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
     if (globalHistoryMask > historyRegisterMask) {
         fatal("Global predictor too large for global history bits!\n");
     }
-    if (choiceHistoryMask > historyRegisterMask) {
-        fatal("Choice predictor too large for global history bits!\n");
-    }
 
-    if (globalHistoryMask < historyRegisterMask &&
-        choiceHistoryMask < historyRegisterMask) {
+    if (globalHistoryMask < historyRegisterMask) {
         inform("More global history bits than required by predictors\n");
     }
 
@@ -138,7 +135,7 @@ EnsembleBP::EnsembleBP(const EnsembleBPParams *params)
     // This is equivalent to (2^(Ctr))/2 - 1
     localThreshold  = (ULL(1) << (localCtrBits  - 1)) - 1;
     globalThreshold = (ULL(1) << (globalCtrBits - 1)) - 1;
-    choiceThreshold = (ULL(1) << (choiceCtrBits - 1)) - 1;
+    gshareThreshold = (ULL(1) << (gshareCtrBits - 1)) - 1;
 }
 
 inline
@@ -196,15 +193,20 @@ EnsembleBP::btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history)
 bool
 EnsembleBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
-     bool local_prediction;
+
     unsigned local_history_idx;
     unsigned local_predictor_idx;
+    unsigned gshare_predictor_idx;
 
+    // Individual Prediction Variables
+    bool local_prediction;
     bool global_prediction;
-    //bool choice_prediction;
+    bool gshare_prediction;
 
     // Weighted accumulated voting result
     int accumulation = 0;
+
+    assert(gshare_predictor_idx < globalPredictorSize);
 
     //Lookup in the local predictor to get its branch prediction
     local_history_idx = calcLocHistIdx(branch_addr);
@@ -216,58 +218,51 @@ EnsembleBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
     global_prediction = globalThreshold <
       globalCtrs[globalHistory[tid] & globalHistoryMask].read();
 
-    //Lookup in the choice predictor to see which one to use
-    //choice_prediction = choiceThreshold <
-    //  choiceCtrs[globalHistory[tid] & choiceHistoryMask].read();
+#ifdef USE_GSHARE
+    gshare_predictor_idx = (((branch_addr >> instShiftAmt)
+                        ^ globalHistory[tid])
+                        & globalHistoryMask);
+#endif
+#ifndef USE_GSHARE
+    gshare_predictor_idx = globalHistory[tid] & globalHistoryMask;
+#endif
+    gshare_prediction = gshareThreshold < gshareCtrs[gshare_predictor_idx].read();
+
 
     // Create BPHistory and pass it back to be recorded.
     BPHistory *history = new BPHistory;
     history->globalHistory = globalHistory[tid];
     history->localPredTaken = local_prediction;
     history->globalPredTaken = global_prediction;
-    //history->globalUsed = choice_prediction;
+    history->gsharePredTaken = gshare_prediction;
     history->localHistoryIdx = local_history_idx;
     history->localHistory = local_predictor_idx;
     bp_history = (void *)history;
 
     assert(local_history_idx < localHistoryTableSize);
 
+    // Add global to verdict
     if(global_prediction)
         accumulation += globalWeights[globalHistory[tid] & globalHistoryMask].read();
     else
         accumulation -= globalWeights[globalHistory[tid] & globalHistoryMask].read();
 
+    // Add local to verdict
     if(local_prediction)
         accumulation += localWeights[local_predictor_idx].read();
     else
         accumulation -= localWeights[local_predictor_idx].read();
 
+#ifdef ENSEMBLE_SIZE_3
+    // Add GShare to verdict
+    if(gshare_prediction)
+        accumulation += gshareWeights[gshare_predictor_idx].read();
+    else
+        accumulation -= gshareWeights[gshare_predictor_idx].read();
+#endif
+
     history->finalPrediction = (accumulation >= 0);
     return history->finalPrediction;
-
-    // Speculative update of the global history and the
-    // selected local history.
-    /*if (choice_prediction) {
-        if (global_prediction) {
-            updateGlobalHistTaken(tid);
-            updateLocalHistTaken(local_history_idx);
-            return true;
-        } else {
-            updateGlobalHistNotTaken(tid);
-            updateLocalHistNotTaken(local_history_idx);
-            return false;
-        }
-    } else {
-        if (local_prediction) {
-            updateGlobalHistTaken(tid);
-            updateLocalHistTaken(local_history_idx);
-            return true;
-        } else {
-            updateGlobalHistNotTaken(tid);
-            updateLocalHistNotTaken(local_history_idx);
-            return false;
-        }
-    }*/
 }
 
 void
@@ -278,7 +273,9 @@ EnsembleBP::uncondBranch(ThreadID tid, Addr pc, void * &bp_history)
     history->globalHistory = globalHistory[tid];
     history->localPredTaken = true;
     history->globalPredTaken = true;
+    history->gsharePredTaken = true;
     history->globalUsed = true;
+    history->finalPrediction = true;
     history->localHistoryIdx = invalidPredictorIndex;
     history->localHistory = invalidPredictorIndex;
     bp_history = static_cast<void *>(history);
@@ -287,22 +284,48 @@ EnsembleBP::uncondBranch(ThreadID tid, Addr pc, void * &bp_history)
 }
 
 void
-EnsembleBP::updateAdditionalStats(bool taken, void* bp_history)
+EnsembleBP::updateAdditionalStats(bool taken, void* bp_history, unsigned gshare_index, unsigned global_index, unsigned local_index,
+                                    bool gshareContributed, bool globalContributed, bool localContributed)
 {
     // Get BP History for prediction information
     BPHistory *history = (BPHistory*)bp_history;
     bool mispredict = true;
-    bool prediction = history->globalUsed ? history->globalPredTaken : history->localPredTaken;
+    bool prediction = history->finalPrediction;
 
     if(taken == prediction)
         mispredict = false;
 
+    // If the expert with the highest weight was overtaken by two experts with lower weights in the vote
+    if(((!gshareContributed && globalContributed && localContributed) 
+            && (gshareWeights[gshare_index].read() > globalWeights[global_index].read())
+            && (gshareWeights[gshare_index].read() > localWeights[local_index].read()))
+        ||
+        ((gshareContributed && !globalContributed && localContributed) 
+            && (globalWeights[global_index].read() > gshareWeights[gshare_index].read())
+            && (globalWeights[global_index].read() > localWeights[local_index].read()))
+        ||
+        ((gshareContributed && globalContributed && !localContributed) 
+            && (localWeights[local_index].read() > gshareWeights[gshare_index].read())
+            && (localWeights[local_index].read() > globalWeights[local_index].read())))
+    {
+        lowWeightExpertsWon++;
+    }
+
+    if((history->localPredTaken == history->globalPredTaken) && (history->globalPredTaken == history->gsharePredTaken))
+    {
+        // All experts voted the same way
+        if(mispredict)
+            allExpertsWrong++;
+        else
+            allExpertsRight++;
+    }
+
     if(mispredict)
     {
-        if((history->globalUsed && (history->localPredTaken == taken)) || (!history->globalUsed && (history->globalPredTaken == taken)))
+        if(((history->localPredTaken == taken)) || (history->globalPredTaken == taken) || (history->gsharePredTaken == taken))
         {
-            // Potential correct predictions should count up here.
-            atLeastOneCorrectExpert++;
+            // There was at least one correct expert
+            atLeastOneCorrectExpertOnMispredict++;
         }
     }
 }
@@ -312,11 +335,9 @@ EnsembleBP::update(ThreadID tid, Addr branch_addr, bool taken,
                      void *bp_history, bool squashed)
 {
     assert(bp_history);
-
     BPHistory *history = static_cast<BPHistory *>(bp_history);
 
     unsigned local_history_idx = calcLocHistIdx(branch_addr);
-
     assert(local_history_idx < localHistoryTableSize);
 
     // Unconditional branches do not use local history.
@@ -340,29 +361,9 @@ EnsembleBP::update(ThreadID tid, Addr branch_addr, bool taken,
         return;
     }
 
-    //updateAdditionalStats(taken, bp_history);
-
     unsigned old_local_pred_index = history->localHistory &
         localPredictorMask;
-
     assert(old_local_pred_index < localPredictorSize);
-
-    // Update the choice predictor to tell it which one was correct if
-    // there was a prediction.
-    /*if (history->localPredTaken != history->globalPredTaken &&
-        old_local_pred_valid)
-    {
-         // If the local prediction matches the actual outcome,
-         // decrement the counter. Otherwise increment the
-         // counter.
-         unsigned choice_predictor_idx =
-           history->globalHistory & choiceHistoryMask;
-         if (history->localPredTaken == taken) {
-             choiceCtrs[choice_predictor_idx].decrement();
-         } else if (history->globalPredTaken == taken) {
-             choiceCtrs[choice_predictor_idx].increment();
-         }
-    }*/
 
     // Update the counters with the proper
     // resolution of the branch. Histories are updated
@@ -371,27 +372,199 @@ EnsembleBP::update(ThreadID tid, Addr branch_addr, bool taken,
     // so they do not need to be updated.
     unsigned global_predictor_idx =
             history->globalHistory & globalHistoryMask;
+
+#ifdef USE_GSHARE
+    unsigned gshare_predictor_idx = (((branch_addr >> instShiftAmt)
+                        ^ globalHistory[tid])
+                        & globalHistoryMask);
+#endif
+#ifndef USE_GSHARE
+    unsigned gshare_predictor_idx = globalHistory[tid] & globalHistoryMask;
+#endif
+
+    unsigned contributorCount = 0;
+    unsigned learningRate = 0;
+    unsigned adjustmentRate = 0;
+    unsigned weightSum = 0;
+
+    bool localContributed = false;
+    bool globalContributed = false;
+    bool gshareContributed = false;
+
+    if(history->finalPrediction == history->globalPredTaken)
+    {
+        globalContributed = true;
+        contributorCount++;
+    }
+    if(history->finalPrediction == history->localPredTaken)
+    {
+        localContributed = true;
+        contributorCount++;
+    }
+    if(history->finalPrediction == history->gsharePredTaken)
+    {
+        gshareContributed = true;
+        contributorCount++;
+    }
+
+
+    updateAdditionalStats(taken, bp_history, gshare_predictor_idx, global_predictor_idx, old_local_pred_index,
+                        gshareContributed, globalContributed, localContributed);
+
+#ifndef USE_FREE_WEIGHTS
+    // Contributor count 0 is impossible and count 3 will not impact weights.
+    learningRate = (contributorCount == 1) ? 2 : ((contributorCount == 2) ? 1 : 0);
+    adjustmentRate = (contributorCount == 1) ? 1 : ((contributorCount == 2) ? 2 : 0);
+
+    // Learning
+    if(gshareContributed)
+    {
+        if(history->finalPrediction == taken)
+        {
+            for(int i = 0; i < learningRate; i++)
+                gshareWeights[gshare_predictor_idx].increment();
+        }
+        else
+        {
+            for(int i = 0; i < learningRate; i++)
+                gshareWeights[gshare_predictor_idx].decrement();
+        }
+    }
+    if(globalContributed)
+    {
+        if(history->finalPrediction == taken)
+        {
+            for(int i = 0; i < learningRate; i++)
+                globalWeights[global_predictor_idx].increment();
+        }
+        else
+        {
+            for(int i = 0; i < learningRate; i++)
+                globalWeights[global_predictor_idx].decrement();
+        }
+        
+    }
+    if(localContributed)
+    {
+        if(history->finalPrediction == taken)
+        {
+            for(int i = 0; i < learningRate; i++)
+                localWeights[old_local_pred_index].increment();
+        }
+        else
+        {
+            for(int i = 0; i < learningRate; i++)
+                localWeights[old_local_pred_index].decrement();
+        }
+        
+    }
+
+    // Adjustments
+    weightSum = (gshareWeights[gshare_predictor_idx].read() + globalWeights[global_predictor_idx].read() + localWeights[old_local_pred_index].read());
+    if(weightSum > MAX_WEIGHT_SUM)
+    {
+        if(!gshareContributed)
+        {
+            if(history->finalPrediction == taken)
+            {
+                // Ensemble was correct but GShare voted the other way
+                for(int i = 0; i < adjustmentRate; i++)
+                    gshareWeights[gshare_predictor_idx].decrement();
+            }
+            else
+            {
+                // Ensemble was incorrect and GShare opposed verdict
+                for(int i = 0; i < adjustmentRate; i++)
+                    gshareWeights[gshare_predictor_idx].increment();
+            }
+        }
+        if(!globalContributed)
+        {
+            if(history->finalPrediction == taken)
+            {
+                // Ensemble was correct but GShare voted the other way
+                for(int i = 0; i < adjustmentRate; i++)
+                    globalWeights[global_predictor_idx].decrement();
+            }
+            else
+            {
+                // Ensemble was incorrect and GShare opposed verdict
+                for(int i = 0; i < adjustmentRate; i++)
+                    globalWeights[global_predictor_idx].increment();
+            }
+        }
+        if(!localContributed)
+        {
+            if(history->finalPrediction == taken)
+            {
+                // Ensemble was correct but GShare voted the other way
+                for(int i = 0; i < adjustmentRate; i++)
+                    localWeights[old_local_pred_index].decrement();
+            }
+            else
+            {
+                // Ensemble was incorrect and GShare opposed verdict
+                for(int i = 0; i < adjustmentRate; i++)
+                    localWeights[old_local_pred_index].increment();
+            }
+        }
+    }
+#endif
+
     if (taken) {
           globalCtrs[global_predictor_idx].increment();
+          gshareCtrs[gshare_predictor_idx].increment();
           if (old_local_pred_valid) {
                  localCtrs[old_local_pred_index].increment();
           }
     } else {
           globalCtrs[global_predictor_idx].decrement();
+          gshareCtrs[gshare_predictor_idx].decrement();
           if (old_local_pred_valid) {
               localCtrs[old_local_pred_index].decrement();
           }
     }
 
-    if((taken && (localCtrs[global_predictor_idx].read() > globalThreshold)) || (!taken && (localCtrs[global_predictor_idx].read() <= globalThreshold)))
-        globalWeights[global_predictor_idx].increment();
-    else
-        globalWeights[global_predictor_idx].decrement();
+#ifdef USE_FREE_WEIGHTS
+    // If Global voted in the same direction as the verdict, update weights
+    if(history->finalPrediction == history->globalPredTaken)
+    {
+        if(history->finalPrediction == taken)
+        {
+            globalWeights[global_predictor_idx].increment();
+        }
+        else
+        {
+            globalWeights[global_predictor_idx].decrement();
+        }
+    }
 
-    if((taken && (localCtrs[old_local_pred_index].read() > localThreshold)) || (!taken && (localCtrs[old_local_pred_index].read() <= localThreshold)))
-        localWeights[old_local_pred_index].increment();
-    else
-        localWeights[old_local_pred_index].decrement();
+    // If Local voted in the same direction as the verdict, update weights
+    if(history->finalPrediction == history->localPredTaken)
+    {
+        if(history->finalPrediction == taken)
+        {
+            localWeights[old_local_pred_index].increment();
+        }
+        else
+        {
+            localWeights[old_local_pred_index].decrement();
+        }
+    } 
+
+    // If GShare voted in the same direction as the verdict, update weights
+    if(history->finalPrediction == history->gsharePredTaken)
+    {
+        if(history->finalPrediction == taken)
+        {
+            gshareWeights[gshare_predictor_idx].increment();
+        }
+        else
+        {
+            gshareWeights[gshare_predictor_idx].decrement();
+        }
+    }
+#endif
 
     // We're done with this history, now delete it.
     delete history;

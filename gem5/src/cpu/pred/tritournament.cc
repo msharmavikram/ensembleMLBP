@@ -398,7 +398,7 @@ TriTournamentBP::updateAdditionalStats(bool taken, void* bp_history)
            (history->local2Used && (history->localPredTaken2 == taken)))
         {
             // Potential correct predictions should count up here.
-            atLeastOneCorrectExpert++;
+            atLeastOneCorrectExpertOnMispredict++;
         }
     }
 }
