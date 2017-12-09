@@ -41,8 +41,6 @@
  * Authors: Nathan Binkert
  */
 
-#include "sim/pseudo_inst.hh"
-
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -63,6 +61,7 @@
 #include "cpu/base.hh"
 #include "cpu/quiesce_event.hh"
 #include "cpu/thread_context.hh"
+#include "debug/DumpPid.hh"
 #include "debug/Loader.hh"
 #include "debug/PseudoInst.hh"
 #include "debug/Quiesce.hh"
@@ -72,6 +71,7 @@
 #include "sim/full_system.hh"
 #include "sim/initparam_keys.hh"
 #include "sim/process.hh"
+#include "sim/pseudo_inst.hh"
 #include "sim/serialize.hh"
 #include "sim/sim_events.hh"
 #include "sim/sim_exit.hh"
@@ -198,7 +198,9 @@ pseudoInst(ThreadContext *tc, uint8_t func, uint8_t subfunc)
         break;
 
       case M5OP_ANNOTATE:
-      case M5OP_RESERVED2:
+      case M5OP_DUMPPID: // dumppid_func
+        dumppid(tc, args[0]);
+        break;
       case M5OP_RESERVED3:
       case M5OP_RESERVED4:
       case M5OP_RESERVED5:
@@ -573,6 +575,16 @@ writefile(ThreadContext *tc, Addr vaddr, uint64_t len, uint64_t offset,
     delete [] buf;
 
     return len;
+}
+
+void
+dumppid(ThreadContext *tc, Addr line_addr)
+{
+    char fn[100];
+    std::string print_line;
+    CopyStringOut(tc, fn, line_addr, 100);
+    print_line = std::string(fn);
+    DPRINTF(DumpPid, "%s\n", print_line);
 }
 
 void

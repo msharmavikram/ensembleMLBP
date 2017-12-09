@@ -221,6 +221,17 @@ do_read_file(int argc, char *argv[])
     read_file(STDOUT_FILENO);
 }
 
+
+void
+do_dumppid(int argc, char *argv[])
+{
+    if (argc != 1)
+      usage();
+
+    const char *print_line = argv[0];
+    m5_dumppid(print_line);
+}
+
 void
 do_write_file(int argc, char *argv[])
 {
@@ -345,6 +356,7 @@ struct MainFunc mainfuncs[] = {
     { "dumpresetstats", do_dump_reset_stats, "[delay [period]]" },
     { "readfile",       do_read_file,        "" },
     { "writefile",      do_write_file,       "<filename>" },
+    { "dumppid",        do_dumppid,          "line_to_be_printed" },
     { "execfile",       do_exec_file,        "" },
     { "checkpoint",     do_checkpoint,       "[delay [period]]" },
     { "addsymbol",      do_addsymbol,        "<address> <symbol>" },

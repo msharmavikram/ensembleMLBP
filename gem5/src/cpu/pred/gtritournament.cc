@@ -277,7 +277,7 @@ GTriTournamentBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
       globalCtrs[globalHistory[tid] & globalHistoryMask].read();
     //Lookup in the gshare gshare predictor to get its branch prediction
     global_prediction2 = globalThreshold2 <
-      globalCtrs2[(branch_addr ^ globalHistory2[tid]) & globalHistoryMask2].read();
+      globalCtrs2[((branch_addr >> instShiftAmt) ^ globalHistory2[tid]) & globalHistoryMask2].read();
 
     //Lookup in the choice predictor to see which one to use
     choice_prediction = choiceThreshold <
@@ -384,7 +384,7 @@ GTriTournamentBP::updateAdditionalStats(bool taken, void* bp_history)
         //TODO
         //if((history->globalUsed && (history->localPredTaken == taken)) || (!history->globalUsed && (history->globalPredTaken == taken)))
             // Potential correct predictions should count up here.
-            atLeastOneCorrectExpert++;
+            atLeastOneCorrectExpertOnMispredict++;
         }
     }
 }

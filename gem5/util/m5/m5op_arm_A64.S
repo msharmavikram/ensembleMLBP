@@ -43,7 +43,10 @@
  *          Andreas Sandberg
  */
 
+
+
 #include <gem5/asm/generic/m5ops.h>
+//#include <gem5/include/gem5/asm/generic/m5ops.h>
 
 #ifdef M5OP_ADDR
 .macro	m5op_func, name, func, subfunc
