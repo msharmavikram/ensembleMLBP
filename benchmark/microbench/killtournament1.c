@@ -17,24 +17,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "m5op.h"
-
-int main(int argc, const char *argv[])
+int main()
 { 
-   int L =10;
-   if (argc !=1){
-      printf("Define patterns length");
-   }
-   else{ 
-       L =  strtol(argv[1], NULL, 10);
-   }
 
-   int long unsigned	i;					/* loop index */
-   int					a=1;				/* variable with conditional assignment*/
-   int long unsigned	liter = 10000000;	/* number of iterations */
-
+   int i=1;					/* loop index */
+   int a=1;				/* variable with conditional assignment*/
    m5_reset_stats(0,0);
-   for (i=0; i<liter; ++i){
-      if ((i%L) == 0) a=0;					/* spy branch */
-   }
-   return 0;
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((i%2) == 0) a=0;					/* spy branch */
+   if ((2%2) == 0) a=0;					/* spy branch */
 }

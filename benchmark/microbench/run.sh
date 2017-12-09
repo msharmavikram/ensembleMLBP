@@ -1,9 +1,10 @@
-aarch64-linux-gnu-gcc -static  Step1.c -o  Step1
-aarch64-linux-gnu-gcc -static  Step2.c -o  Step2
-aarch64-linux-gnu-gcc -static  Step3.c -o  Step3
-aarch64-linux-gnu-gcc -static  Step4.c -o  Step4
-aarch64-linux-gnu-gcc -static  Step5.c -o  Step5
-aarch64-linux-gnu-gcc -static  Step6.c -o  Step6
-aarch64-linux-gnu-gcc -static  Step7.c -o  Step7
-aarch64-linux-gnu-gcc -static  Step8.c -o  Step8
-aarch64-linux-gnu-gcc -static  Step9.c -o  Step9
+aarch64-linux-gnu-g++ -static  Step1.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o  Step1
+aarch64-linux-gnu-g++ -static  Step2.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o  Step2
+aarch64-linux-gnu-g++ -static  Step3.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o  Step3
+aarch64-linux-gnu-g++ -static  Step4.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o  Step4
+aarch64-linux-gnu-g++ -static  Step5.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o  Step5
+aarch64-linux-gnu-g++ -static  Step6.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o  Step6
+aarch64-linux-gnu-g++ -static  Step7.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o  Step7
+aarch64-linux-gnu-g++ -static  Step8.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o  Step8
+aarch64-linux-gnu-g++ --static Step1_v1.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o Step1_v1
+aarch64-linux-gnu-g++ -static  Step9.c -L /home/vikram/coursework/ece511/ensembleMLBP/benchmark/microbench -l m5 -o  Step9
