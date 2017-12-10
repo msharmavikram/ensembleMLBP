@@ -15,8 +15,9 @@
 //#define L3 6	/* pattern length */
 #include <stdio.h>
 #include <stdlib.h>
+#include "m5op.h"
 
-void main(int argc, const char *argv[])
+int main(int argc, const char *argv[])
 { 
    int L3=6;
    if (argc !=1){
@@ -30,6 +31,7 @@ void main(int argc, const char *argv[])
    int					a;					/* variable with conditional assignment*/
    int long unsigned	liter = 10000000;	/* number of iterations */
    
+   m5_reset_stats(0,0);
    for (i=1;i<=liter;++i)
    { 
       if ((i%L3) == 0) 
@@ -52,4 +54,5 @@ void main(int argc, const char *argv[])
                   a =0;
       }
    }
+   return 0;
 } 

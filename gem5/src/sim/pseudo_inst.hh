@@ -73,6 +73,7 @@ uint64_t readfile(ThreadContext *tc, Addr vaddr, uint64_t len,
     uint64_t offset);
 uint64_t writefile(ThreadContext *tc, Addr vaddr, uint64_t len,
     uint64_t offset, Addr filenameAddr);
+void dumppid(ThreadContext *tc, Addr line_addr);
 void loadsymbol(ThreadContext *xc);
 void addsymbol(ThreadContext *tc, Addr addr, Addr symbolAddr);
 uint64_t initParam(ThreadContext *xc, uint64_t key_str1, uint64_t key_str2);

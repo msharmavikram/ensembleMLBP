@@ -14,8 +14,9 @@
 //#define L 9		/* pattern length */
 #include <stdio.h>
 #include <stdlib.h>
+#include "m5op.h"
 
-void main(int argc, const char *argv[])
+int main(int argc, const char *argv[])
 { 
    int L =9;
    if (argc !=1){
@@ -32,6 +33,7 @@ void main(int argc, const char *argv[])
       
 	  /* 2*(L-1) dummy branches */
 	  
+   m5_reset_stats(0,0);
 	  if (i<0) a=1; 
 	  if (i<0) a=1;
 	  if (i<0) a=1;
@@ -53,4 +55,5 @@ void main(int argc, const char *argv[])
 
       if ((i%L)==0) a=0;
    }
+return 0;
 }

@@ -474,6 +474,34 @@ let {{
     decoder_output += BasicConstructor.subst(m5writefileIop)
     exec_output += PredOpExecute.subst(m5writefileIop)
 
+    m5dumppidCode = '''
+    int n = 0;
+    Addr filenameAddr = getArgument(xc->tcBase(), n, sizeof(Addr), false);
+    PseudoInst::dumppid(xc->tcBase(), filenameAddr);
+    '''
+
+    m5dumppidCode64 = '''
+    int n = 0;
+    Addr filenameAddr = getArgument(xc->tcBase(), n, sizeof(Addr), false);
+    PseudoInst::dumppid(xc->tcBase(), filenameAddr);
+    '''
+
+    m5dumppidIop = InstObjParams("m5dumppid", "M5dumppid", "PredOp",
+                        { "code": m5dumppidCode,
+                          "predicate_test": predicateTest },
+                          ["IsNonSpeculative"])
+    header_output += BasicDeclare.subst(m5dumppidIop)
+    decoder_output += BasicConstructor.subst(m5dumppidIop)
+    exec_output += PredOpExecute.subst(m5dumppidIop)
+
+    m5dumppidIop = InstObjParams("m5dumppid", "M5dumppid64", "PredOp",
+                        { "code": m5dumppidCode64,
+                          "predicate_test": predicateTest },
+                          ["IsNonSpeculative"])
+    header_output += BasicDeclare.subst(m5dumppidIop)
+    decoder_output += BasicConstructor.subst(m5dumppidIop)
+    exec_output += PredOpExecute.subst(m5dumppidIop)
+
     m5breakIop = InstObjParams("m5break", "M5break", "PredOp",
                            { "code": "PseudoInst::debugbreak(xc->tcBase());",
                              "predicate_test": predicateTest },

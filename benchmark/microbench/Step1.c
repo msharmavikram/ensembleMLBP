@@ -16,8 +16,9 @@
 //#define L 10								/* pattern length */
 #include <stdio.h>
 #include <stdlib.h>
+#include "m5op.h"
 
-void main(int argc, const char *argv[])
+int main(int argc, const char *argv[])
 { 
    int L =10;
    if (argc !=1){
@@ -31,7 +32,9 @@ void main(int argc, const char *argv[])
    int					a=1;				/* variable with conditional assignment*/
    int long unsigned	liter = 10000000;	/* number of iterations */
 
+   m5_reset_stats(0,0);
    for (i=0; i<liter; ++i){
       if ((i%L) == 0) a=0;					/* spy branch */
    }
+   return 0;
 }

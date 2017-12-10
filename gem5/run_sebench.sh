@@ -1,8 +1,8 @@
-build/ARM/gem5.fast -d m5out/Bubblesort ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Bubblesort
+build/ARM/gem5.fast -d m5out/Bubblesort ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Bubblesort &
 #build/ARM/gem5.fast -d m5out/FloatMM    ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/FloatMM
 #build/ARM/gem5.fast -d m5out/IntMM      ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/IntMM
-build/ARM/gem5.fast -d m5out/Oscar      ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Oscar
-build/ARM/gem5.fast -d m5out/Perm       ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Perm
+build/ARM/gem5.fast -d m5out/Oscar      ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Oscar &
+build/ARM/gem5.fast -d m5out/Perm       ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Perm &
 build/ARM/gem5.fast -d m5out/Puzzle     ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Puzzle
 build/ARM/gem5.fast -d m5out/Queens     ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Queens
 build/ARM/gem5.fast -d m5out/Quicksort  ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Quicksort
