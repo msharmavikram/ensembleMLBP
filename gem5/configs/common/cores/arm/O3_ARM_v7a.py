@@ -99,8 +99,9 @@ class O3_ARM_v7a_FUP(FUPool):
 # Gshare
 # Yags
 # EnsembleBP
+# EnsembleBP2
 # TriTournamentBP
-class O3_ARM_v7a_BP(EnsembleBP):
+class O3_ARM_v7a_BP(EnsembleBP2):
     cacheSize = 2048 # Yags
     historyLength = 12 # Perceptron
     

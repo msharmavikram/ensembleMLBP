@@ -250,6 +250,41 @@ class EnsembleBP(BranchPredictor):
     localCtrBits2 = Param.Unsigned(2, "Bits per counter")
     localHistoryTableSize2 = Param.Unsigned(2048, "size of second local history table")
 
+class EnsembleBP2(BranchPredictor):
+    type = 'EnsembleBP2'
+    cxx_class = 'EnsembleBP2'
+    cxx_header = "cpu/pred/ensemble2.hh"
+
+    localPredictorSize = Param.Unsigned(2048, "Size of local predictor")
+    localCtrBits = Param.Unsigned(2, "Bits per counter")
+    localHistoryTableSize = Param.Unsigned(2048, "size of local history table")
+    globalPredictorSize = Param.Unsigned(8192, "Size of global predictor")
+    globalCtrBits = Param.Unsigned(2, "Bits per counter")
+    gsharePredictorSize = Param.Unsigned(8192, "Size of gshare predictor")
+    gshareCtrBits = Param.Unsigned(2, "Bits of gshare counters")
+    choicePredictorSize = Param.Unsigned(8192, "Size of choice predictor")
+    choiceCtrBits = Param.Unsigned(2, "Bits of choice counters")
+
+    logSizeBiMP = Param.Unsigned(14, "Log size of Bimodal predictor in bits")
+    logSizeTagTables = Param.Unsigned(11, "Log size of tag table in LTAGE")
+    logSizeLoopPred = Param.Unsigned(8, "Log size of the loop predictor")
+    nHistoryTables = Param.Unsigned(12, "Number of history tables")
+    tagTableCounterBits = Param.Unsigned(3, "Number of tag table counter bits")
+    histBufferSize = Param.Unsigned(2097152,
+            "A large number to track all branch histories(2MEntries default)")
+    minHist = Param.Unsigned(4, "Minimum history size of LTAGE")
+    maxHist = Param.Unsigned(640, "Maximum history size of LTAGE")
+    minTagWidth = Param.Unsigned(7, "Minimum tag size in tag tables")
+    cacheSize = Param.Unsigned(2048, "Size of the taken/not taken caches")
+    historyLength = Param.Unsigned(12, "History Length")
+
+    # Not used by this predictor, only putting them here to suppress errors
+    choicePredictorSize2 = Param.Unsigned(8192, "Size of second choice predictor")
+    choiceCtrBits2 = Param.Unsigned(2, "Bits of second choice counters")
+    localPredictorSize2 = Param.Unsigned(2048, "Size of second local predictor")
+    localCtrBits2 = Param.Unsigned(2, "Bits per counter")
+    localHistoryTableSize2 = Param.Unsigned(2048, "size of second local history table")
+
 class TriTournamentBP(BranchPredictor):
     type = 'TriTournamentBP'
     cxx_class = 'TriTournamentBP'
