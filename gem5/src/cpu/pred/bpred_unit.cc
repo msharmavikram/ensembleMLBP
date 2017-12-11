@@ -149,9 +149,21 @@ BPredUnit::regStats()
         .desc("Number of mispredicted indirect branches.")
         ;
 
-    atLeastOneCorrectExpertOnMispredict
-        .name(name() + ".atLeastOneCorrectExpertOnMispredict")
-        .desc("Number of mispredicts where there was at least one correct not-selected scheme.")
+    // atLeastOneCorrectExpertOnMispredict
+    //     .name(name() + ".atLeastOneCorrectExpertOnMispredict")
+    //     .desc("Number of mispredicts where there was at least one correct not-selected scheme.")
+    //     ;
+    oneCorrectExpert
+        .name(name() + ".oneCorrectExpert")
+        .desc("Number of times when there is a single correct expert on a mispredict.")
+        ;
+    twoCorrectExpert
+        .name(name() + ".twoCorrectExpert")
+        .desc("Number of times when there are two correct experts on a mispredict.")
+        ;
+    threeCorrectExpert
+        .name(name() + ".threeCorrectExpert")
+        .desc("Number of times when there are three correct experts on a mispredict.")
         ;
 
     allExpertsWrong

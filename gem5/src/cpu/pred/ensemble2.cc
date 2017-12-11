@@ -314,6 +314,17 @@ EnsembleBP2::updateAdditionalStats(bool taken, void* bp_history, unsigned gshare
     BPHistory *history = (BPHistory*)bp_history;
     bool mispredict = true;
     bool prediction = history->finalPrediction;
+    uint32_t numCorrect = 0;
+    bool tournamentCorrect = (history->tournamentPredTaken == taken);
+    bool globalCorrect = (history->globalPredTaken == taken);
+    bool gshareCorrect = (history->gsharePredTaken == taken);
+
+    if(tournamentCorrect)
+        numCorrect++;
+    if(globalCorrect)
+        numCorrect++;
+    if(gshareCorrect)
+        numCorrect++;
 
     if(taken == prediction)
         mispredict = false;
@@ -350,6 +361,16 @@ EnsembleBP2::updateAdditionalStats(bool taken, void* bp_history, unsigned gshare
             // There was at least one correct expert
             atLeastOneCorrectExpertOnMispredict++;
         }
+    }
+
+    if(mispredict)
+    {
+        if(numCorrect == 1)
+            oneCorrectExpert++;
+        else if(numCorrect == 2)
+            twoCorrectExpert++;
+        else if(numCorrect == 3)
+            threeCorrectExpert++;
     }
 }
 

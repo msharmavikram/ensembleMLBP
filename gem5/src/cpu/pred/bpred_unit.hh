@@ -336,6 +336,9 @@ class BPredUnit : public SimObject
     Stats::Scalar allExpertsWrong;
     Stats::Scalar allExpertsRight;
     Stats::Scalar lowWeightExpertsWon;
+    Stats::Scalar oneCorrectExpert;
+    Stats::Scalar twoCorrectExpert;
+    Stats::Scalar threeCorrectExpert;
 
     /** @} */
 };
