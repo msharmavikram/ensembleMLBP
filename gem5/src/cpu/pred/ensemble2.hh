@@ -243,9 +243,13 @@ class EnsembleBP2 : public BPredUnit
     unsigned gsharePredictorSize;
     unsigned gshareCtrBits;
 
-    std::vector<SatCounter> tournamentWeights;
-    std::vector<SatCounter> globalWeights;
-    std::vector<SatCounter> gshareWeights;
+    //std::vector<SatCounter> tournamentWeights;
+    //std::vector<SatCounter> globalWeights;
+    //std::vector<SatCounter> gshareWeights;
+
+    SatCounter tournamentWeight;
+    SatCounter globalWeight;
+    SatCounter gshareWeight;
 
     /** Thresholds for the counter value; above the threshold is taken,
      *  equal to or below the threshold is not taken.

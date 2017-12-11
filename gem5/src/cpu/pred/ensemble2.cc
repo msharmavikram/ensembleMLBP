@@ -48,8 +48,8 @@
 #define USE_GSHARE 1
 //#define USE_FREE_WEIGHTS 1
 #define ENSEMBLE_SIZE_3 1
-#define MAX_WEIGHT_SUM 12
-#define WEIGHT_COUNTER_SIZE 4
+#define MAX_WEIGHT_SUM 5
+#define WEIGHT_COUNTER_SIZE 2
 
 EnsembleBP2::EnsembleBP2(const EnsembleBP2Params *params)
     : BPredUnit(params),
@@ -103,22 +103,22 @@ EnsembleBP2::EnsembleBP2(const EnsembleBP2Params *params)
 
     // Setup the array of counters for the global predictor
     globalCtrs.resize(globalPredictorSize);
-    globalWeights.resize(globalPredictorSize);
-    tournamentWeights.resize(choicePredictorSize);
+    //globalWeights.resize(globalPredictorSize);
+    //tournamentWeights.resize(choicePredictorSize);
 
     for (int i = 0; i < globalPredictorSize; ++i){
         globalCtrs[i].setBits(globalCtrBits);
-        globalWeights[i].setBits(WEIGHT_COUNTER_SIZE);
-        tournamentWeights[i].setBits(WEIGHT_COUNTER_SIZE);
+        globalWeight.setBits(WEIGHT_COUNTER_SIZE);
+        tournamentWeight.setBits(WEIGHT_COUNTER_SIZE);
     }
 
     // Setup the array of counters for the gshare predictor
     gshareCtrs.resize(gsharePredictorSize);
-    gshareWeights.resize(globalPredictorSize);
+    //gshareWeights.resize(globalPredictorSize);
 
     for (int i = 0; i < gsharePredictorSize; ++i){
         gshareCtrs[i].setBits(gshareCtrBits); 
-        gshareWeights[i].setBits(WEIGHT_COUNTER_SIZE);
+        gshareWeight.setBits(WEIGHT_COUNTER_SIZE);
     }
 
     // Set up choiceHistoryMask
@@ -267,21 +267,21 @@ EnsembleBP2::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 
     // Add global to verdict
     if(global_prediction)
-        accumulation += globalWeights[globalHistory[tid] & globalHistoryMask].read();
+        accumulation += globalWeight.read();
     else
-        accumulation -= globalWeights[globalHistory[tid] & globalHistoryMask].read();
+        accumulation -= globalWeight.read();
 
     // Add tournament to verdict
     if(history->tournamentPredTaken)
-        accumulation += tournamentWeights[globalHistory[tid] & choiceHistoryMask].read();
+        accumulation += tournamentWeight.read();
     else
-        accumulation -= tournamentWeights[globalHistory[tid] & choiceHistoryMask].read();
+        accumulation -= tournamentWeight.read();
 
     // Add GShare to verdict
     if(gshare_prediction)
-        accumulation += gshareWeights[gshare_predictor_idx].read();
+        accumulation += gshareWeight.read();
     else
-        accumulation -= gshareWeights[gshare_predictor_idx].read();
+        accumulation -= gshareWeight.read();
 
     history->finalPrediction = (accumulation >= 0);
     return history->finalPrediction;
@@ -320,16 +320,16 @@ EnsembleBP2::updateAdditionalStats(bool taken, void* bp_history, unsigned gshare
 
     // If the expert with the highest weight was overtaken by two experts with lower weights in the vote
     if(((!gshareContributed && globalContributed && tournamentContributed) 
-            && (gshareWeights[gshare_index].read() > globalWeights[global_index].read())
-            && (gshareWeights[gshare_index].read() > tournamentWeights[tournament_index].read()))
+            && (gshareWeight.read() > globalWeight.read())
+            && (gshareWeight.read() > tournamentWeight.read()))
         ||
         ((gshareContributed && !globalContributed && tournamentContributed) 
-            && (globalWeights[global_index].read() > gshareWeights[gshare_index].read())
-            && (globalWeights[global_index].read() > tournamentWeights[tournament_index].read()))
+            && (globalWeight.read() > gshareWeight.read())
+            && (globalWeight.read() > tournamentWeight.read()))
         ||
         ((gshareContributed && globalContributed && !tournamentContributed) 
-            && (tournamentWeights[tournament_index].read() > gshareWeights[gshare_index].read())
-            && (tournamentWeights[tournament_index].read() > globalWeights[tournament_index].read())))
+            && (tournamentWeight.read() > gshareWeight.read())
+            && (tournamentWeight.read() > globalWeight.read())))
     {
         lowWeightExpertsWon++;
     }
@@ -456,12 +456,12 @@ EnsembleBP2::update(ThreadID tid, Addr branch_addr, bool taken,
         if(history->finalPrediction == taken)
         {
             for(int i = 0; i < learningRate; i++)
-                gshareWeights[gshare_predictor_idx].increment();
+                gshareWeight.increment();
         }
         else
         {
             for(int i = 0; i < learningRate; i++)
-                gshareWeights[gshare_predictor_idx].decrement();
+                gshareWeight.decrement();
         }
     }
     if(globalContributed)
@@ -469,12 +469,12 @@ EnsembleBP2::update(ThreadID tid, Addr branch_addr, bool taken,
         if(history->finalPrediction == taken)
         {
             for(int i = 0; i < learningRate; i++)
-                globalWeights[global_predictor_idx].increment();
+                globalWeight.increment();
         }
         else
         {
             for(int i = 0; i < learningRate; i++)
-                globalWeights[global_predictor_idx].decrement();
+                globalWeight.decrement();
         }
         
     }
@@ -483,18 +483,18 @@ EnsembleBP2::update(ThreadID tid, Addr branch_addr, bool taken,
         if(history->finalPrediction == taken)
         {
             for(int i = 0; i < learningRate; i++)
-                tournamentWeights[choice_predictor_idx].increment();
+                tournamentWeight.increment();
         }
         else
         {
             for(int i = 0; i < learningRate; i++)
-                tournamentWeights[choice_predictor_idx].decrement();
+                tournamentWeight.decrement();
         }
         
     }
 
     // Adjustments
-    weightSum = (gshareWeights[gshare_predictor_idx].read() + globalWeights[global_predictor_idx].read() + tournamentWeights[choice_predictor_idx].read());
+    weightSum = (gshareWeight.read() + globalWeight.read() + tournamentWeight.read());
     if(weightSum > MAX_WEIGHT_SUM)
     {
         if(!gshareContributed)
@@ -503,13 +503,13 @@ EnsembleBP2::update(ThreadID tid, Addr branch_addr, bool taken,
             {
                 // Ensemble was correct but GShare voted the other way
                 for(int i = 0; i < adjustmentRate; i++)
-                    gshareWeights[gshare_predictor_idx].decrement();
+                    gshareWeight.decrement();
             }
             else
             {
                 // Ensemble was incorrect and GShare opposed verdict
                 for(int i = 0; i < adjustmentRate; i++)
-                    gshareWeights[gshare_predictor_idx].increment();
+                    gshareWeight.increment();
             }
         }
         if(!globalContributed)
@@ -518,13 +518,13 @@ EnsembleBP2::update(ThreadID tid, Addr branch_addr, bool taken,
             {
                 // Ensemble was correct but GShare voted the other way
                 for(int i = 0; i < adjustmentRate; i++)
-                    globalWeights[global_predictor_idx].decrement();
+                    globalWeight.decrement();
             }
             else
             {
                 // Ensemble was incorrect and GShare opposed verdict
                 for(int i = 0; i < adjustmentRate; i++)
-                    globalWeights[global_predictor_idx].increment();
+                    globalWeight.increment();
             }
         }
         if(!tournamentContributed)
@@ -533,13 +533,13 @@ EnsembleBP2::update(ThreadID tid, Addr branch_addr, bool taken,
             {
                 // Ensemble was correct but GShare voted the other way
                 for(int i = 0; i < adjustmentRate; i++)
-                    tournamentWeights[choice_predictor_idx].decrement();
+                    tournamentWeight.decrement();
             }
             else
             {
                 // Ensemble was incorrect and GShare opposed verdict
                 for(int i = 0; i < adjustmentRate; i++)
-                    tournamentWeights[choice_predictor_idx].increment();
+                    tournamentWeight.increment();
             }
         }
     }
