@@ -21,7 +21,7 @@ build/ARM/gem5.fast -d m5out/Quicksort  ./configs/example/se.py --caches --l2cac
 # build/ARM/gem5.fast -d m5out/RealMM     ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/RealMM
 # build/ARM/gem5.fast -d m5out/Towers     ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Towers
 # build/ARM/gem5.fast -d m5out/Treesort   ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/se-benchmarks/Treesort
-build/ARM/gem5.fast -d m5out/soplex ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/soplex/soplex_base.arm '-m10000 ../benchmark/soplex/test.mps'
+build/ARM/gem5.fast -d m5out/soplex ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c ../benchmark/soplex/soplex_base.arm -o '-m10000 ../benchmark/soplex/test.mps'
 # echo "Running Parsec Blackscholes Simple"
 # build/ARM/gem5.fast -d m5out/blackscholes ./configs/example/se.py --caches --l2cache --cpu-type=O3_ARM_v7a_3 -c /home/vikram/coursework/ece511/ensembleMLBP/benchmark/blackscholes/src/blackscholes -o '1 /home/vikram/coursework/ece511/ensembleMLBP/benchmark/blackscholes/inputs/in_4.txt out.log'
 # echo "Running Parsec Blackscholes Complex"
